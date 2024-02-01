@@ -171,12 +171,12 @@ string remove_padding(string decrypted_msg)
 string remove_zeros(string hash_20bits)
 {
     int i = 0;
-    for (i = hash_20bits.size() - 1; i >= 0; i--)
+    for (i = 0; i <hash_20bits.size(); i++)
     {
         if (hash_20bits[i] != '0')
             break;
     }
-    return hash_20bits.substr(0, i + 1);
+    return hash_20bits.substr(i,hash_20bits.size()-i);
 }
 void print_keyset(const std::vector<std::vector<int>> &keySet)
 {
@@ -208,7 +208,7 @@ bool check_all_ciphertexts(vector<int> transposition_key, vector<string> ciphert
         hash_value_num+=Alp_Num[it];
         }
     cout<< final_decrypted<< " "<< decrypted_without_hash<< " "<< remove_zeros(hash_value_num)<< endl;
-    if (jenkins_hash(decrypted_without_hash) != stoi(remove_zeros(hash_value_num))){
+    if (to_string(jenkins_hash(decrypted_without_hash)) != remove_zeros(hash_value_num)){
         return false;
     }
     }
@@ -241,7 +241,7 @@ vector<int> brute_force(vector<string> ciphertexts_vec)
                 hash_value_num+=Alp_Num[it];
             }
 
-            if (jenkins_hash(decrypted_without_hash) != stoi(remove_zeros(hash_value_num)))
+            if (to_string(jenkins_hash(decrypted_without_hash)) != remove_zeros(hash_value_num))
                 continue;
             else
             {   
@@ -266,17 +266,17 @@ string plain_hash_concatenation(const string& plaintext) {
 
     // Ensure the hash value has at least 20 digits
     string hash_str = to_string(hash_value);
-    hash_str += string(20 - hash_str.length(), '0'); // Pad with zeros to the right
+    hash_str = string(20 - hash_str.length(), '0') + hash_str; // Pad with zeros to the left
 
-    for (char digit : hash_str) {
-        hash_converted += Num_Alp[digit - '0'];
-    }
+for (char digit : hash_str) {
+    hash_converted += Num_Alp[digit - '0'];
+}
       cout<<"Plaintext: "<<  plaintext<<" "<<hash_converted<<  " "<< hash_value<< endl;
     return plaintext + hash_converted;
 }
 int main()
 {
-    vector<int> key = {3, 1, 4, 2};
+    vector<int> key = {3, 1, 4, 2,5,6,7};
   
 
     vector<string> plaintexts_vec;
