@@ -155,7 +155,6 @@ string decrypt(vector<int> key, const string &ciphertext)
             plaintext += matrix[i][j];
         }
     }
-
     return plaintext;
 }
 string remove_padding(string decrypted_msg)
