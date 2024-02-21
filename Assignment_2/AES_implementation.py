@@ -138,9 +138,10 @@ def encrypt(plaintext, key):
     expanded_key=keyExpansion(key)
     
     state=addRoundKey(state,expanded_key[0:4])
-    print(f"Initial_state:{matrix2bytes(state).hex()}")
+    print(f"Initial_state : {matrix2bytes(state).hex()}")
 
     round_states = {}
+    print()
     for r in range(1,10):
         state=sub_bytes(state)
         state = shift_rows(state)
@@ -148,53 +149,63 @@ def encrypt(plaintext, key):
         state=addRoundKey(state,expanded_key[4*r:4*(r+1)])
         new_state=state
         round_states[r]=new_state
-        if(r==9 or r==1):
-            print(f"{r}th state:{matrix2bytes(new_state).hex()}")
+        # if(r==9 or r==1):
+        print(f"{r}th state : {matrix2bytes(new_state).hex()}")
         
     state = sub_bytes(state)
     state = shift_rows(state)
     state = addRoundKey(state, expanded_key[10*4:11*4])
-
+    print()
     return state,round_states
         
 
 def decrypt(ciphertext, key):
   
-    print("Starting Decrypt")
+    print("Starting Decryption ...")
 
     state = ciphertext
     expanded_key = keyExpansion(key)
-    print(f"Decryption starting state:{matrix2bytes(state).hex()}")
-
+    print(f"Decryption starting state : {matrix2bytes(state).hex()}")
+    print()
     state = addRoundKey(state,expanded_key[10*4:11*4])
     state = inv_shift_rows(state)
     state = inv_sub_bytes(state)
     round_states = {}
 
     for r in range(9, 0, -1):
-        if(r==9 or r==1):
-            print(f"{10-r}th state:{matrix2bytes(state).hex()}")
+        # if(r==9 or r==1):
+        print(f"{10-r}th state : {matrix2bytes(state).hex()}")
         state = addRoundKey(state, expanded_key[r*4:(r+1)*4])
         state = inv_mix_columns(state)
         state = inv_shift_rows(state)
         state = inv_sub_bytes(state)
         round_states[r] = state
-    print(f"Final state:{matrix2bytes(state).hex()}")
+    print()
+    print(f"Final state : {matrix2bytes(state).hex()}")
     state = addRoundKey(state, expanded_key[0:4])
     return state,round_states
 
-def main():
-  plaintext="Two One Nine Two".encode("utf-8")
+def solve(pt):
+  print("\n-----------------------------------------------------\n")
+  print("Input :",pt)
+  plaintext=pt.encode("utf-8")
   key="ABCDabcd12344321".encode("utf-8")
-  print(f"The intial Plaintext taken :{plaintext}")
-  print(f"The key used for AES: {key}")
+  print(f"The intial Plaintext taken : {plaintext}")
+  print(f"The key used for AES : {key}")
+  print()
 
   ciphertext,round_states_enc=encrypt(plaintext,key)
-  print(f"Ciphertext:{matrix2bytes(ciphertext).hex()}")
+  print(f"Ciphertext : {matrix2bytes(ciphertext).hex()}")
+
+  print("\n-----------------------------------------------------\n")
 
   plaintext,round_states_dec=decrypt(ciphertext,key)
   Original_plaintext=matrix2bytes(plaintext).decode("utf-8")
-  print(f"Original Plaintext:{Original_plaintext}")
+  print("\n-----------------------------------------------------\n")
+  print(f"Original Plaintext : {Original_plaintext}")
+  print("\n-----------------------------------------------------\n")
 
 if __name__ == '__main__':
-   main()
+   solve("Two One Nine Two")
+   solve("Ones Twos Threes")
+   solve("Four Five Eleven")
