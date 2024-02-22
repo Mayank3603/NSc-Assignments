@@ -2,9 +2,20 @@
 from tables import get_s_box_value, get_inv_s_box_value, get_r_con_value
 
 def bytes2matrix(key):
-    return [list(key[i:i+4]) for i in range(0, len(key), 4)]
+    matrix = []
+    for i in range(0, len(key), 4):
+        temp_row = []
+        for j in range(4):
+            temp_row.append(key[i + j])
+        matrix.append(temp_row)
+    return matrix
+
 def matrix2bytes(matrix):
-    return bytes([byte for row in matrix for byte in row])
+    byte_list = []
+    for row in matrix:
+        for byte in row:
+            byte_list.append(byte)
+    return bytes(byte_list)
 
 def rot_word_left(word):
     return word[1:]+word[0]
@@ -39,34 +50,51 @@ def xor_bytes(a, b):
 
 def keyExpansion(key):
     key = bytes2matrix(key)
-   
     Nr = 10
     Nk = 4
     i = 0
+
     while len(key) < 4 * (Nr + 1):
         word = list(key[-1])
         if i % 4 == 0:
             word.append(word.pop(0))
-            word = [get_s_box_value(b // 0x10, b % 0x10) for b in word]
+            for index in range(len(word)):
+                word[index] = get_s_box_value(word[index] // 0x10, word[index] % 0x10)
             word[0] ^= get_r_con_value(i)
             i += 1
         word = xor_bytes(word, key[-4])
         key.append(list(word))
+
     return key
 
-        
-def addRoundKey(state,key):
-    Nk=4
-    state=[[state[i][j]^key[i][j] for j in range(Nk)] for i in range(Nk)]
-    return state
+def addRoundKey(state, key):
+    Nk = 4
+    new_state = []
+    for i in range(Nk):
+        temp_row = []
+        for j in range(Nk):
+            temp_row.append(state[i][j] ^ key[i][j])
+        new_state.append(temp_row)
+    return new_state
 
 def sub_bytes(s):
-    s = [[get_s_box_value(s[i][j] // 0x10, s[i][j] % 0x10) for j in range(4)] for i in range(4)]
-    return s
+    new_state = []
+    for i in range(4):
+        temp_row = []
+        for j in range(4):
+            temp_row.append(get_s_box_value(s[i][j] // 0x10, s[i][j] % 0x10))
+        new_state.append(temp_row)
+    return new_state
 
 def inv_sub_bytes(s):
-    s = [[get_inv_s_box_value(s[i][j] // 0x10, s[i][j] % 0x10) for j in range(4)] for i in range(4)]
-    return s
+    new_state = []
+    for i in range(4):
+        temp_row = []
+        for j in range(4):
+            temp_row.append(get_inv_s_box_value(s[i][j] // 0x10, s[i][j] % 0x10))
+        new_state.append(temp_row)
+    return new_state
+
 def shift_rows(state):
     state[1] = [state[1][1], state[1][2], state[1][3], state[1][0]]
     state[2] = [state[2][2], state[2][3], state[2][0], state[2][1]]
@@ -79,13 +107,16 @@ def inv_shift_rows(state):
     state[3] = [state[3][1], state[3][2], state[3][3], state[3][0]]
     return state
 
-def mix_single_column(a):
-    a = [a[i] ^ a[0] ^ a[1] ^ a[2] ^ a[3] ^ xtime(a[i % 4]^a[(i+1)%4]) for i in range(4)]
-    return a
-
 def mix_columns(state):
-    state=[mix_single_column(state[i]) for i in range(4)]
-    return state
+    new_state = []
+    for i in range(4):
+        new_column = []
+        for j in range(4):
+            temp_xor = state[i][j % 4] ^ state[i][0] ^ state[i][1] ^ state[i][2] ^ state[i][3] ^ xtime(state[i][j % 4] ^ state[i][(j + 1) % 4])
+            new_column.append(temp_xor)
+        new_state.append(new_column)
+    return new_state
+
     
 def inv_mix_columns(state):
     for i in range(4):
@@ -106,18 +137,17 @@ def encrypt(plaintext, key):
     
     state=addRoundKey(state,expanded_key[0:4])
     print(f"Initial_state : {matrix2bytes(state).hex()}")
-
     round_states = {}
     print()
-    for r in range(1,10):
+    for round in range(1,10):
         state=sub_bytes(state)
         state = shift_rows(state)
         state = mix_columns(state)
-        state=addRoundKey(state,expanded_key[4*r:4*(r+1)])
+        state=addRoundKey(state,expanded_key[4*round:4*(round+1)])
         new_state=state
-        round_states[r]=new_state
+        round_states[round]=new_state
        
-        print(f"{r}th state : {matrix2bytes(new_state).hex()}")
+        print(f"{round}th state : {matrix2bytes(new_state).hex()}")
         
     state = sub_bytes(state)
     state = shift_rows(state)
@@ -139,14 +169,13 @@ def decrypt(ciphertext, key):
     state = inv_sub_bytes(state)
     round_states = {}
 
-    for r in range(9, 0, -1):
-       
-        print(f"{10-r}th state : {matrix2bytes(state).hex()}")
-        state = addRoundKey(state, expanded_key[r*4:(r+1)*4])
+    for round in range(9, 0, -1):
+        print(f"{10-round}th state : {matrix2bytes(state).hex()}")
+        state = addRoundKey(state, expanded_key[round*4:(round+1)*4])
         state = inv_mix_columns(state)
         state = inv_shift_rows(state)
         state = inv_sub_bytes(state)
-        round_states[r] = state
+        round_states[round] = state
     print()
     print(f"Final state : {matrix2bytes(state).hex()}")
     state = addRoundKey(state, expanded_key[0:4])
@@ -176,3 +205,10 @@ if __name__ == '__main__':
    solve("Two One Nine Two")
    solve("Ones Twos Threes")
    solve("Four Five Eleven")
+   while True:
+        s = input("Enter plaintext : ")
+        if(len(s)!=16):
+            print("INVALID INPUT! Plaintext length should be 16 bytes or 128 bits")
+        else:
+            solve(s)
+            break
