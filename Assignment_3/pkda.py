@@ -38,12 +38,13 @@ def req_from_clients(conn, pkda):
             client_id = request["client_id"]
             other_client_id = request["other_client_id"]
             other_public_key = pkda.client_public_keys[other_client_id]
+            print(other_public_key)
+       
             if other_public_key:
                 response = {
-                    "pu_arg1": rsa.encrypt(pkda.private_key,str(other_public_key[0]).encode('utf-8')),
-                    "pu_arg2": rsa.encrypt(pkda.private_key,str(other_public_key[1]).encode('utf-8')),
-                    # "type": rsa.encrypt(request["type"].encode('utf-8'), pkda.private_key),
-                    "cur_time": rsa.encrypt(pkda.private_key,request["cur_time"].encode('utf-8'))
+                    "pu_arg1": rsa.encrypt(pkda.private_key,str(other_public_key[0])),
+                    "pu_arg2": rsa.encrypt(pkda.private_key,str(other_public_key[1])),
+                    "cur_time": rsa.encrypt(pkda.private_key,request["cur_time"])
                 }
                 conn.sendall(json.dumps(response).encode())
             else:
