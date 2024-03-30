@@ -10,7 +10,7 @@ class Client:
     def __init__(self, my_id, p, q):
         self.client_id = my_id
         self.public_key, self.private_key = rsa.generate_key_pair(p, q)
-        print(self.public_key, self.private_key)
+        # print(self.public_key, self.private_key)
 
         self.pkda_public_key = None
         self.other_client_publickey=None
@@ -28,7 +28,7 @@ class Client:
             sock.sendall(json.dumps(Request_to_register).encode("utf-8"))
             response = sock.recv(8192)
             self.pkda_public_key = json.loads(response.decode())["PKDA_PU"]
-            print("Received PKDA_public key ")
+            print("Received PKDA_public key and client has been register")
             print(self.pkda_public_key)
     def req_pu_other(self, other_client_id):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -44,6 +44,7 @@ class Client:
 
             response = json.loads(sock.recv(8192).decode())
             print(f"Received public key from PKDA: {response}")
+            print()
             other_public_key = (int(rsa.decrypt(self.pkda_public_key,response["pu_arg1"])), int(rsa.decrypt(self.pkda_public_key,response["pu_arg2"])))
             time = rsa.decrypt(self.pkda_public_key,response["cur_time"])
             
@@ -61,11 +62,12 @@ class Client:
                 "client_id":rsa.encrypt(self.other_client_publickey,self.client_id),
                 "Nonce": rsa.encrypt(self.other_client_publickey,str(self.generate_nonce()))
             }
+            print("Sending hankshape request")
             sock.sendall(json.dumps(Request).encode())
             response = json.loads(sock.recv(8192).decode())
             print(f"Received reply to handshake request from client2: {response}")
             type_of_req=rsa.decrypt(self.private_key,response["type_of_req"])
-            print(type_of_req)
+            # print(type_of_req)
             if(type_of_req=="Reply to handshake request"):
                 print(f"Sending confirmation of handshake to client_2")
                 Nonce2=rsa.decrypt(self.private_key,response["Nonce_2"])
@@ -79,6 +81,7 @@ class Client:
     def send_hi_messages(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect(("localhost", 50053))  # Connect to client2
+            print()
             for i in range(1, 4):
                 hi_message = f"Hi_{i}"
                 print(f"Sending Hi message: {hi_message}")

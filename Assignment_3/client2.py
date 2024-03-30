@@ -10,7 +10,7 @@ class Client:
     def __init__(self, my_id, p, q):
         self.client_id = my_id
         self.public_key, self.private_key = rsa.generate_key_pair(p, q)
-        print(self.public_key, self.private_key)
+        # print(self.public_key, self.private_key)
 
         self.pkda_public_key = None
         self.other_client_publickey=None
@@ -30,7 +30,7 @@ class Client:
             response = sock.recv(8192)
             self.pkda_public_key = json.loads(response.decode())["PKDA_PU"]
             print("Received PKDA_public key ")
-            print(self.pkda_public_key)
+            # print(self.pkda_public_key)
             
     def req_pu_other(self, other_client_id):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -45,16 +45,16 @@ class Client:
             sock.sendall(json.dumps(Request_PU_of_PKDA).encode("utf-8"))
 
             response = json.loads(sock.recv(8192).decode())
-            print(f"Received public key from PKDA: {response}")
+            print(f"Received public key from PKDA: client 1")
             other_public_key = (int(rsa.decrypt(self.pkda_public_key,response["pu_arg1"])), int(rsa.decrypt(self.pkda_public_key,response["pu_arg2"])))
             time = rsa.decrypt(self.pkda_public_key,response["cur_time"])
             
             print(f"{self.client_id} Got public key of {other_public_key} at Time: {time}")
             self.other_client_publickey=other_public_key
-            print(self.other_client_publickey)
+            # print(self.other_client_publickey)
             
     def generate_nonce(self):
-        print(uuid.uuid4().hex )
+        # print(uuid.uuid4().hex )
         return uuid.uuid4().hex 
     
     def handle_req(self, connection):
@@ -64,18 +64,18 @@ class Client:
                 
             if not data:
                 break
-            print(f"Received data from client 1: {data}")
+            # print(f"Received data from client 1: {data}")
             request = json.loads(data.decode('latin-1')) 
             # request=json.loads(data.decode()) 
             # request = json.loads(connection.recv(8192).decode())
-            print(request)
+            # print(request)
             # other_public_key = (int(rsa.decrypt(self.pkda_public_key,response["pu_arg1"])), int(rsa.decrypt(self.pkda_public_key,response["pu_arg2"])))
             # time = rsa.decrypt(self.pkda_public_key,response["cur_time"])
             if(self.flag==0):
                 self.req_pu_other("client_1")  
                 self.flag=1 
             type_of_req=rsa.decrypt(self.private_key,request["type_of_req"])
-            print(type_of_req)
+            # print(type_of_req)
             if(type_of_req=="Request_handshake"):
 
                 print("Received handshake request from client_1")
@@ -101,12 +101,13 @@ class Client:
             
             elif type_of_req == "Hi_message":
                 hi_mssg = rsa.decrypt(self.private_key, request["Hi_message"])
-                print(f"Received Hi message: {hi_mssg}")
+                print(f"Received message: {hi_mssg}")
                 got_mssg = f"Got_{hi_mssg[-1]}"
                 response = {
                     "type_of_req": rsa.encrypt(self.other_client_publickey, "Got Message"),
                     "got_mssg": rsa.encrypt(self.other_client_publickey, got_mssg)
                 }
+                print("Sending response to Hi message")
                 connection.sendall(json.dumps(response).encode())
 
     def receive_handshake(self):

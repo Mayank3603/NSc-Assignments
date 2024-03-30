@@ -8,8 +8,8 @@ class PKDA:
     def __init__(self, p, q):
         self.public_key, self.private_key = generate_key_pair(p, q)
         self.client_public_keys = {}
-        print("Public Key:", self.public_key)
-        print("Private Key:", self.private_key)
+        # print("Public Key:", self.public_key)
+        # print("Private Key:", self.private_key)
     
     def register_clients(self, client_id, pu):
         self.client_public_keys[client_id] = pu
