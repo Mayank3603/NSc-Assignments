@@ -27,7 +27,7 @@ class PoliceClient:
         print("Server Public Key:", self.server_public_key)
         # print("Server Private Key:", self.server_private_key)
 
-    def register_driver(self, name, driver_id, dob,fingerprint):
+    def register_driver(self, name, driver_id, dob,fingerprint,certificate):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect(("localhost", 50051))
 
@@ -37,7 +37,8 @@ class PoliceClient:
                     "name": name,
                     "driver_id": driver_id,
                     "dob": dob,
-                    "finger_print": fingerprint
+                    "finger_print": fingerprint,
+                    "certificate": certificate
                 }
             }
 
@@ -46,7 +47,7 @@ class PoliceClient:
             response = sock.recv(8192)
             print("Response from server:", response.decode("utf-8"))
 
-    def revoke_driver(self, name, driver_id, fingerprint):
+    def revoke_driver(self, name, driver_id, fingerprint,certificate):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect(("localhost", 50051))
 
@@ -55,7 +56,8 @@ class PoliceClient:
                 "driver_data": {
                     "name": name,
                     "driver_id": driver_id,
-                    "finger_print": fingerprint
+                    "finger_print": fingerprint,
+                    "certificate": certificate
                 }
             }
             print("Sending request to revoke to PKDA")
@@ -63,11 +65,11 @@ class PoliceClient:
             response = sock.recv(8192)
             print("Response from server:", response.decode("utf-8"))
 
-    def inquire_driver(self, name, driver_id,finger_print):
+    def inquire_driver(self, name, driver_id,finger_print, certificate):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.connect(("localhost", 50051))
 
-            encoded_this = name+driver_id+finger_print
+            encoded_this = name+driver_id+finger_print+certificate
 
             hash_value = hashlib.sha256(encoded_this.encode()).hexdigest()
             encrypted_hash = encrypt(self.client_private_key, hash_value)
@@ -79,7 +81,8 @@ class PoliceClient:
                     "driver_id": driver_id,
                     "hash": encrypted_hash,
                     "time": str(time.time()),
-                    "finger_print":finger_print
+                    "finger_print":finger_print,
+                    "certificate": certificate
                 }
             }
 
@@ -111,16 +114,21 @@ if __name__ == "__main__":
             driver_id = input("Enter Driver's ID: ")
             dob = input("Enter Date of Birth: ")
             fingerprint = random.randint(10000, 99999)
-            police_client.register_driver(name, driver_id, dob,fingerprint)
+            certificate = random.randint(1000,9999)
+            police_client.register_driver(name, driver_id, dob,fingerprint, certificate)
             print("Your fingerprint is:", fingerprint)
+            print("Your certificate is:", certificate)
         elif choice == 2:
             name = input("Enter name: ")
             driver_id = input("Enter Driver's ID: ")
             fingerprint = input("Enter fingerprint: ")
-            police_client.revoke_driver(name, driver_id, fingerprint)
+            certificate = input("Enter certificate: ")
+
+            police_client.revoke_driver(name, driver_id, fingerprint, certificate)
         elif choice == 3:
             name = "Rohit"
             driver_id = "DL10-1234"
             fingerprint = "12345"
-            police_client.inquire_driver(name, driver_id,fingerprint)
+            certificate = "1234"
+            police_client.inquire_driver(name, driver_id,fingerprint, certificate)
 

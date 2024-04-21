@@ -4,14 +4,13 @@ import json
 from rsa import encrypt, decrypt
 from time import time
 import hashlib
-# from assign_key import get_client_public_key, get_client_private_key, get_server_public_key, get_server_private_key
 
 Database = {
-    "0001": "Rohit|DL10-1234|" + str(time() - 2592000) + "|" + "12345",
-    "0002": "Abhinav|UP44-0001|" + str(time() + 2592500) + "|" + "88888",
-    "0003": "Aditya|HR32-1111|" + str(time() - 2592600) + "|" + "54321",
-    "0004": "Rahul|PB22-9999|" + str(time() + 2592700) + "|" + "12378",
-    "0005": "Kushagra|RJ11-6666|" + str(time() - 2592800) + "|" +"55555" 
+    "0001": "Rohit|DL10-1234|" + str(time() + 2592000) + "|" + "12345" + "|" + "1234",
+    "0002": "Abhinav|UP44-0001|" + str(time() + 2592500) + "|" + "88888" + "|" + "2345",
+    "0003": "Aditya|HR32-1111|" + str(time() - 2592600) + "|" + "54321" + "|" + "3456",
+    "0004": "Rahul|PB22-9999|" + str(time() + 2592700) + "|" + "12378" + "|" + "4567",
+    "0005": "Kushagra|RJ11-6666|" + str(time() - 2592800) + "|" +"55555" + "|" + "5678"
 }
 
 class Server:
@@ -20,31 +19,28 @@ class Server:
             lines = file.readlines()
 
         self.client_public_key = tuple(int(x) for x in lines[1].strip()[1:-1].split(','))
-        # self.client_private_key = tuple(int(x) for x in lines[3].strip()[1:-1].split(','))
         self.server_public_key = tuple(int(x) for x in lines[5].strip()[1:-1].split(','))
         self.server_private_key = tuple(int(x) for x in lines[7].strip()[1:-1].split(','))
 
         print("Client Public Key:", self.client_public_key)
-        # print("Client Private Key:", self.client_private_key)
         print("Server Public Key:", self.server_public_key)
         print("Server Private Key:", self.server_private_key)
         self.database = Database
-        # print( self.client_public_key, self.client_private_key)
        
 
     def register_driver(self, driver_data):
         driver_id = str(len(self.database) + 1).zfill(4) 
         timestamp = str(time())  
-        driver_info = f"{driver_data['name']}|{driver_data['driver_id']}|{timestamp}|{driver_data['finger_print']}"
+        driver_info = f"{driver_data['name']}|{driver_data['driver_id']}|{timestamp}|{driver_data['finger_print']}|{driver_data['certificate']}"
         self.database[driver_id] = driver_info
         print("Driver registered successfully.")
         print(self.database)
 
-    def revoke_driver(self, name, driver_id, fingerprint):
+    def revoke_driver(self, name, driver_id, fingerprint, certificate):
         to_delete = []
         for key, value in self.database.items():
             parts = value.split("|")
-            if parts[0] == name and parts[1] == driver_id and parts[3]==fingerprint:
+            if parts[0] == name and parts[1] == driver_id and parts[3]==fingerprint and parts[4]==certificate:
                 to_delete.append(key)
         
         for key in to_delete:
@@ -58,13 +54,14 @@ class Server:
         decrypted_hash = decrypt(self.client_public_key, encrypted_hash)
         name = driver_data["name"]
         fingerprint = driver_data["finger_print"]
+        certificate = driver_data["certificate"]
         current_timestamp = float(driver_data["time"])
-        decoded = name+driver_id+fingerprint
+        decoded = name+driver_id+fingerprint+certificate
         if decrypted_hash == hashlib.sha256(decoded.encode()).hexdigest():
             flg=0
             for key, value in self.database.items():
                 parts = value.split("|")
-                if parts[0] == name and parts[1] == driver_id and parts[3]==fingerprint:
+                if parts[0] == name and parts[1] == driver_id and parts[3]==fingerprint and parts[4]==certificate:
                     expiry_timestamp = float(parts[2])
                     flg=1
                     break
@@ -106,7 +103,8 @@ def req_from_clients(conn, pkda):
             name = driver_data["name"]
             driver_id = driver_data["driver_id"]
             fingerprint = driver_data["finger_print"]
-            pkda.revoke_driver(name, driver_id, fingerprint)
+            certificate = driver_data["certificate"]
+            pkda.revoke_driver(name, driver_id, fingerprint, certificate)
             response = {"message": "Driver license revoked successfully."}
             conn.sendall(json.dumps(response).encode())
 
