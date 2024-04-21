@@ -7,29 +7,25 @@ import hashlib
 # from assign_key import get_client_public_key, get_client_private_key, get_server_public_key, get_server_private_key
 
 Database = {
-    "0001": "Rohit|DL10-1234|" + str(time() + 2592000),
-    "0002": "Abhinav|UP44-0001|" + str(time() + 2592500),
-    "0003": "Aditya|HR32-1111|" + str(time() - 2592600),
-    "0004": "Rahul|PB22-9999|" + str(time() + 2592700),
-    "0005": "Kushagra|RJ11-6666|" + str(time() - 2592800)
+    "0001": "Rohit|DL10-1234|" + str(time() - 2592000) + "|" + "12345",
+    "0002": "Abhinav|UP44-0001|" + str(time() + 2592500) + "|" + "88888",
+    "0003": "Aditya|HR32-1111|" + str(time() - 2592600) + "|" + "54321",
+    "0004": "Rahul|PB22-9999|" + str(time() + 2592700) + "|" + "12378",
+    "0005": "Kushagra|RJ11-6666|" + str(time() - 2592800) + "|" +"55555" 
 }
 
 class Server:
     def __init__(self, p, q):
-        with open("keys.txt", "r") as file:
+        with open('keys.txt', 'r') as file:
             lines = file.readlines()
-            self.client_public_key = tuple(map(int, lines[1][1:-2].split(',')))
-            self.client_private_key = tuple(map(int, lines[3][1:-2].split(',')))
-            self.server_public_key = tuple(map(int, lines[5][1:-2].split(',')))
-            self.server_private_key = tuple(map(int, lines[7][1:-2].split(',')))
 
-            # self.client_public_key =(73, 221)
-            # self.client_private_key = (121, 221)
-            # self.server_public_key = (91, 437)
-            # self.server_private_key = (235, 43)
+        self.client_public_key = tuple(int(x) for x in lines[1].strip()[1:-1].split(','))
+        # self.client_private_key = tuple(int(x) for x in lines[3].strip()[1:-1].split(','))
+        self.server_public_key = tuple(int(x) for x in lines[5].strip()[1:-1].split(','))
+        self.server_private_key = tuple(int(x) for x in lines[7].strip()[1:-1].split(','))
 
         print("Client Public Key:", self.client_public_key)
-        print("Client Private Key:", self.client_private_key)
+        # print("Client Private Key:", self.client_private_key)
         print("Server Public Key:", self.server_public_key)
         print("Server Private Key:", self.server_private_key)
         self.database = Database
@@ -37,34 +33,38 @@ class Server:
        
 
     def register_driver(self, driver_data):
-        driver_id = str(len(self.database) + 1).zfill(4)  # Generating driver ID
-        timestamp = str(time())  # Current timestamp
-        driver_info = f"{driver_data['name']}|{driver_data['driver_id']}|{timestamp}"
+        driver_id = str(len(self.database) + 1).zfill(4) 
+        timestamp = str(time())  
+        driver_info = f"{driver_data['name']}|{driver_data['driver_id']}|{timestamp}|{driver_data['finger_print']}"
         self.database[driver_id] = driver_info
         print("Driver registered successfully.")
+        print(self.database)
 
-    def revoke_driver(self, name, driver_id):
+    def revoke_driver(self, name, driver_id, fingerprint):
         to_delete = []
         for key, value in self.database.items():
             parts = value.split("|")
-            if parts[0] == name and parts[1] == driver_id:
+            if parts[0] == name and parts[1] == driver_id and parts[3]==fingerprint:
                 to_delete.append(key)
+        
         for key in to_delete:
             del self.database[key]
         print("Driver license revoked successfully.")
+        print(self.database)
 
     def inquire_driver(self, driver_data,conn):
         driver_id = driver_data["driver_id"]
         encrypted_hash = driver_data["hash"]
         decrypted_hash = decrypt(self.client_public_key, encrypted_hash)
         name = driver_data["name"]
+        fingerprint = driver_data["finger_print"]
         current_timestamp = float(driver_data["time"])
-
-        if decrypted_hash == hashlib.sha256(driver_id.encode()).hexdigest():
+        decoded = name+driver_id+fingerprint
+        if decrypted_hash == hashlib.sha256(decoded.encode()).hexdigest():
             flg=0
             for key, value in self.database.items():
                 parts = value.split("|")
-                if parts[0] == name and parts[1] == driver_id:
+                if parts[0] == name and parts[1] == driver_id and parts[3]==fingerprint:
                     expiry_timestamp = float(parts[2])
                     flg=1
                     break
@@ -105,7 +105,8 @@ def req_from_clients(conn, pkda):
             driver_data = request["driver_data"]
             name = driver_data["name"]
             driver_id = driver_data["driver_id"]
-            pkda.revoke_driver(name, driver_id)
+            fingerprint = driver_data["finger_print"]
+            pkda.revoke_driver(name, driver_id, fingerprint)
             response = {"message": "Driver license revoked successfully."}
             conn.sendall(json.dumps(response).encode())
 
@@ -117,18 +118,19 @@ def req_from_clients(conn, pkda):
 
 if __name__ == "__main__":
     try:
-        pkda = Server(7, 13)
+        transport_server = Server(7, 13)
 
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind(('localhost', 50051))
         server.listen(10)
+        
 
         print("Server is listening for connections...")
 
         while True:
             connection, address = server.accept()
             print(f"New connection from {address}")
-            threading.Thread(target=req_from_clients, args=(connection, pkda)).start()
+            threading.Thread(target=req_from_clients, args=(connection, transport_server)).start()
 
     except KeyboardInterrupt:
         print("Server stopped by keyboard interrupt")
